@@ -1,0 +1,23 @@
+<svg width="1080" height="1920" viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1080" height="1920" fill="#f8fafc"/>
+  <rect x="40" y="100" width="1000" height="200" rx="10" fill="#f59e0b"/>
+  <text x="540" y="200" font-family="Arial" font-size="80" text-anchor="middle" dominant-baseline="central" fill="white">PENDING APP</text>
+  
+  <rect x="40" y="350" width="1000" height="800" rx="10" fill="#f3f4f6"/>
+  <text x="540" y="750" font-family="Arial" font-size="60" text-anchor="middle" dominant-baseline="central" fill="#64748b">Screenshot 2</text>
+  
+  <rect x="100" y="400" width="300" height="300" rx="20" fill="#a5b4fc"/>
+  <text x="250" y="550" font-family="Arial" font-size="40" text-anchor="middle" dominant-baseline="central" fill="white">Feature 1</text>
+  
+  <rect x="450" y="400" width="300" height="300" rx="20" fill="#a5b4fc"/>
+  <text x="600" y="550" font-family="Arial" font-size="40" text-anchor="middle" dominant-baseline="central" fill="white">Feature 2</text>
+  
+  <rect x="100" y="750" width="300" height="300" rx="20" fill="#a5b4fc"/>
+  <text x="250" y="900" font-family="Arial" font-size="40" text-anchor="middle" dominant-baseline="central" fill="white">Feature 3</text>
+  
+  <rect x="450" y="750" width="300" height="300" rx="20" fill="#a5b4fc"/>
+  <text x="600" y="900" font-family="Arial" font-size="40" text-anchor="middle" dominant-baseline="central" fill="white">Feature 4</text>
+  
+  <rect x="140" y="1200" width="800" height="100" rx="50" fill="#3b82f6"/>
+  <text x="540" y="1250" font-family="Arial" font-size="40" text-anchor="middle" dominant-baseline="central" fill="white">INSTALL NOW</text>
+</svg>
