@@ -11,6 +11,9 @@ deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
 run = ["npm", "run", "start"]
 
+[env]
+DATABASE_URL = "postgres://postgres:postgres@localhost:5432/postgres"
+
 [workflows]
 runButton = "Project"
 
