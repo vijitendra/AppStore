@@ -52,23 +52,23 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-50 border-b">
-      <div className="container mx-auto px-4 py-3">
+    <header className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 shadow-md sticky top-0 z-50">
+      <div className="container mx-auto px-4 py-4">
         <div className="flex justify-between items-center gap-2 lg:gap-4">
           {/* Logo - smaller on mobile, normal size on desktop */}
           <div className="flex-shrink-0">
             <Link href="/" className="flex items-center space-x-1 sm:space-x-2">
-              <Store className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-              <span className="text-gray-900 font-bold text-base sm:text-xl">AppMarket</span>
+              <Store className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              <span className="text-white font-bold text-base sm:text-xl">AppMarket</span>
             </Link>
           </div>
           
           {/* Desktop Navigation Links - hidden on mobile */}
           <div className="hidden lg:flex items-center space-x-6">
-            <Link href="/apps/categories" className="text-gray-700 hover:text-primary font-medium">
+            <Link href="/apps/categories" className="text-white/80 hover:text-white font-medium">
               Categories
             </Link>
-            <Link href="/apps/top" className="text-gray-700 hover:text-primary font-medium">
+            <Link href="/apps/top" className="text-white/80 hover:text-white font-medium">
               Top Charts
             </Link>
           </div>

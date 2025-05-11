@@ -37,7 +37,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
-import Sidebar from "@/components/developer/sidebar";
+// Main layout is provided by DeveloperRoute component
 
 const securityFormSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),
@@ -156,77 +156,114 @@ export default function DeveloperSettingsPage() {
   };
   
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
+    <>
+      <Helmet>
+        <title>Settings - Developer Dashboard</title>
+        <meta 
+          name="description" 
+          content="Manage your developer account settings" 
+        />
+      </Helmet>
       
-      <div className="flex-1 p-6">
-        <Helmet>
-          <title>Settings - Developer Dashboard</title>
-          <meta 
-            name="description" 
-            content="Manage your developer account settings" 
-          />
-        </Helmet>
-        
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-1">Account Settings</h1>
-          <p className="text-gray-500">Manage your account security and preferences</p>
-        </div>
-        
-        <div className="flex border-b mb-6">
-          <button
-            className={`px-4 py-2 font-medium text-sm ${
-              activeTab === "security"
-                ? "border-b-2 border-primary text-primary"
-                : "text-gray-600"
-            }`}
-            onClick={() => setActiveTab("security")}
-          >
-            Security
-          </button>
-          <button
-            className={`px-4 py-2 font-medium text-sm ${
-              activeTab === "notifications"
-                ? "border-b-2 border-primary text-primary"
-                : "text-gray-600"
-            }`}
-            onClick={() => setActiveTab("notifications")}
-          >
-            Notifications
-          </button>
-          <button
-            className={`px-4 py-2 font-medium text-sm ${
-              activeTab === "account"
-                ? "border-b-2 border-primary text-primary"
-                : "text-gray-600"
-            }`}
-            onClick={() => setActiveTab("account")}
-          >
-            Account
-          </button>
-        </div>
-        
-        {activeTab === "security" && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center">
-                  <Shield className="h-5 w-5 text-primary mr-2" />
-                  <CardTitle>Password & Security</CardTitle>
-                </div>
-                <CardDescription>
-                  Change your password and manage security settings
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Form {...securityForm}>
-                  <form onSubmit={securityForm.handleSubmit(onSecuritySubmit)} className="space-y-4">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold mb-1">Account Settings</h1>
+        <p className="text-gray-500">Manage your account security and preferences</p>
+      </div>
+      
+      <div className="flex border-b mb-6">
+        <button
+          className={`px-4 py-2 font-medium text-sm ${
+            activeTab === "security"
+              ? "border-b-2 border-primary text-primary"
+              : "text-gray-600"
+          }`}
+          onClick={() => setActiveTab("security")}
+        >
+          Security
+        </button>
+        <button
+          className={`px-4 py-2 font-medium text-sm ${
+            activeTab === "notifications"
+              ? "border-b-2 border-primary text-primary"
+              : "text-gray-600"
+          }`}
+          onClick={() => setActiveTab("notifications")}
+        >
+          Notifications
+        </button>
+        <button
+          className={`px-4 py-2 font-medium text-sm ${
+            activeTab === "account"
+              ? "border-b-2 border-primary text-primary"
+              : "text-gray-600"
+          }`}
+          onClick={() => setActiveTab("account")}
+        >
+          Account
+        </button>
+      </div>
+      
+      {activeTab === "security" && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center">
+                <Shield className="h-5 w-5 text-primary mr-2" />
+                <CardTitle>Password & Security</CardTitle>
+              </div>
+              <CardDescription>
+                Change your password and manage security settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...securityForm}>
+                <form onSubmit={securityForm.handleSubmit(onSecuritySubmit)} className="space-y-4">
+                  <FormField
+                    control={securityForm.control}
+                    name="currentPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Current Password</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            placeholder="••••••••"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={securityForm.control}
-                      name="currentPassword"
+                      name="newPassword"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Current Password</FormLabel>
+                          <FormLabel>New Password</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              placeholder="••••••••"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            At least 8 characters
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={securityForm.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Confirm New Password</FormLabel>
                           <FormControl>
                             <Input
                               type="password"
@@ -238,349 +275,306 @@ export default function DeveloperSettingsPage() {
                         </FormItem>
                       )}
                     />
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={securityForm.control}
-                        name="newPassword"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>New Password</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="password"
-                                placeholder="••••••••"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              At least 8 characters
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={securityForm.control}
-                        name="confirmPassword"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Confirm New Password</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="password"
-                                placeholder="••••••••"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <Button 
-                      type="submit" 
-                      disabled={passwordMutation.isPending}
-                    >
-                      {passwordMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Update Password
-                    </Button>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <div className="flex items-center">
-                  <AlertCircle className="h-5 w-5 text-primary mr-2" />
-                  <CardTitle>Two-Factor Authentication</CardTitle>
-                </div>
-                <CardDescription>
-                  Add an extra layer of security to your account
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium mb-1">Enable 2FA</h4>
-                    <p className="text-sm text-gray-500">
-                      Protect your account with two-factor authentication
-                    </p>
-                  </div>
-                  <Switch />
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <div className="flex items-center">
-                  <Shield className="h-5 w-5 text-primary mr-2" />
-                  <CardTitle>Access Security</CardTitle>
-                </div>
-                <CardDescription>
-                  Manage your device history and sessions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium mb-2">Active Sessions</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between py-2 px-3 bg-primary/5 rounded-md">
-                        <div>
-                          <p className="font-medium">Current Device</p>
-                          <p className="text-xs text-gray-500">
-                            Last active: Just now
-                          </p>
-                        </div>
-                        <Badge>Current</Badge>
-                      </div>
-                      
-                      <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-md">
-                        <div>
-                          <p className="font-medium">iPhone 13 Pro</p>
-                          <p className="text-xs text-gray-500">
-                            Last active: 2 days ago
-                          </p>
-                        </div>
-                        <Button size="sm" variant="outline">Log Out</Button>
-                      </div>
-                    </div>
                   </div>
                   
-                  <Separator />
-                  
-                  <div className="pt-2">
-                    <Button variant="destructive">Log Out All Devices</Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-        
-        {activeTab === "notifications" && (
+                  <Button 
+                    type="submit" 
+                    disabled={passwordMutation.isPending}
+                  >
+                    {passwordMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Update Password
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+          
           <Card>
             <CardHeader>
               <div className="flex items-center">
-                <BellRing className="h-5 w-5 text-primary mr-2" />
-                <CardTitle>Notification Preferences</CardTitle>
+                <AlertCircle className="h-5 w-5 text-primary mr-2" />
+                <CardTitle>Two-Factor Authentication</CardTitle>
               </div>
               <CardDescription>
-                Manage how and when you receive notifications
+                Add an extra layer of security to your account
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Form {...notificationsForm}>
-                <form onSubmit={notificationsForm.handleSubmit(onNotificationsSubmit)} className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium mb-1">Enable 2FA</h4>
+                  <p className="text-sm text-gray-500">
+                    Protect your account with two-factor authentication
+                  </p>
+                </div>
+                <Switch />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <div className="flex items-center">
+                <Shield className="h-5 w-5 text-primary mr-2" />
+                <CardTitle>Access Security</CardTitle>
+              </div>
+              <CardDescription>
+                Manage your device history and sessions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium mb-2">Active Sessions</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between py-2 px-3 bg-primary/5 rounded-md">
+                      <div>
+                        <p className="font-medium">Current Device</p>
+                        <p className="text-xs text-gray-500">
+                          Last active: Just now
+                        </p>
+                      </div>
+                      <Badge>Current</Badge>
+                    </div>
+                    
+                    <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-md">
+                      <div>
+                        <p className="font-medium">iPhone 13 Pro</p>
+                        <p className="text-xs text-gray-500">
+                          Last active: 2 days ago
+                        </p>
+                      </div>
+                      <Button size="sm" variant="outline">Log Out</Button>
+                    </div>
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                <div className="pt-2">
+                  <Button variant="destructive">Log Out All Devices</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      
+      {activeTab === "notifications" && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center">
+              <BellRing className="h-5 w-5 text-primary mr-2" />
+              <CardTitle>Notification Preferences</CardTitle>
+            </div>
+            <CardDescription>
+              Manage how and when you receive notifications
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...notificationsForm}>
+              <form onSubmit={notificationsForm.handleSubmit(onNotificationsSubmit)} className="space-y-6">
+                <FormField
+                  control={notificationsForm.control}
+                  name="emailNotifications"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between p-3 rounded-lg border">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Email Notifications</FormLabel>
+                        <FormDescription>
+                          Receive notifications via email
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="ml-6 space-y-4">
                   <FormField
                     control={notificationsForm.control}
-                    name="emailNotifications"
+                    name="appUpdates"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between p-3 rounded-lg border">
+                      <FormItem className="flex flex-row items-center justify-between">
                         <div className="space-y-0.5">
-                          <FormLabel className="text-base">Email Notifications</FormLabel>
+                          <FormLabel>App Updates</FormLabel>
                           <FormDescription>
-                            Receive notifications via email
+                            Notifications about app status changes and updates
                           </FormDescription>
                         </div>
                         <FormControl>
                           <Switch
                             checked={field.value}
                             onCheckedChange={field.onChange}
+                            disabled={!notificationsForm.watch("emailNotifications")}
                           />
                         </FormControl>
                       </FormItem>
                     )}
                   />
                   
-                  <div className="ml-6 space-y-4">
-                    <FormField
-                      control={notificationsForm.control}
-                      name="appUpdates"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between">
-                          <div className="space-y-0.5">
-                            <FormLabel>App Updates</FormLabel>
-                            <FormDescription>
-                              Notifications about app status changes and updates
-                            </FormDescription>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              disabled={!notificationsForm.watch("emailNotifications")}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={notificationsForm.control}
-                      name="securityAlerts"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between">
-                          <div className="space-y-0.5">
-                            <FormLabel>Security Alerts</FormLabel>
-                            <FormDescription>
-                              Important notifications about your account security
-                            </FormDescription>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              disabled={!notificationsForm.watch("emailNotifications")}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={notificationsForm.control}
-                      name="marketingEmails"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between">
-                          <div className="space-y-0.5">
-                            <FormLabel>Marketing Emails</FormLabel>
-                            <FormDescription>
-                              Receive updates about new features and promotional offers
-                            </FormDescription>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              disabled={!notificationsForm.watch("emailNotifications")}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={notificationsForm.control}
-                      name="emailDigestFrequency"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email Digest Frequency</FormLabel>
-                          <FormControl>
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                              disabled={!notificationsForm.watch("emailNotifications")}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select frequency" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="daily">Daily</SelectItem>
-                                <SelectItem value="weekly">Weekly</SelectItem>
-                                <SelectItem value="monthly">Monthly</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
+                  <FormField
+                    control={notificationsForm.control}
+                    name="securityAlerts"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between">
+                        <div className="space-y-0.5">
+                          <FormLabel>Security Alerts</FormLabel>
                           <FormDescription>
-                            How often you want to receive email digests
+                            Important notifications about your account security
                           </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={!notificationsForm.watch("emailNotifications")}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
                   
-                  <Button 
-                    type="submit" 
-                    disabled={notificationsMutation.isPending}
-                  >
-                    {notificationsMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save Notification Preferences
-                  </Button>
-                </form>
-              </Form>
+                  <FormField
+                    control={notificationsForm.control}
+                    name="marketingEmails"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between">
+                        <div className="space-y-0.5">
+                          <FormLabel>Marketing Emails</FormLabel>
+                          <FormDescription>
+                            Receive emails about new features and promotions
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={!notificationsForm.watch("emailNotifications")}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={notificationsForm.control}
+                  name="emailDigestFrequency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email Digest Frequency</FormLabel>
+                      <Select
+                        disabled={!notificationsForm.watch("emailNotifications")}
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select frequency" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        How often you'd like to receive digest emails
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <Button 
+                  type="submit" 
+                  disabled={notificationsMutation.isPending}
+                >
+                  {notificationsMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Preferences
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      )}
+      
+      {activeTab === "account" && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Account Information</CardTitle>
+              <CardDescription>
+                Manage your account details
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium mb-1">Username</p>
+                    <p className="text-gray-600">{user?.username}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium mb-1">Email</p>
+                    <p className="text-gray-600">{user?.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium mb-1">Name</p>
+                    <p className="text-gray-600">
+                      {user?.firstName} {user?.lastName}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium mb-1">Account Type</p>
+                    <p className="text-gray-600">
+                      {user?.isAdmin 
+                        ? "Admin" 
+                        : user?.isDeveloper 
+                          ? "Developer" 
+                          : "Regular User"}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
-        )}
-        
-        {activeTab === "account" && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Account Information</CardTitle>
-                <CardDescription>
-                  View your account details and status
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500">Username</h4>
-                      <p>{user?.username}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500">Email</h4>
-                      <p>{user?.email}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500">Account Type</h4>
-                      <p>{user?.isAdmin ? "Admin" : "Developer"}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500">Member Since</h4>
-                      <p>{new Date(user?.createdAt || Date.now()).toLocaleDateString()}</p>
-                    </div>
+          
+          <Card className="border-destructive border-2">
+            <CardHeader className="text-destructive">
+              <CardTitle>Danger Zone</CardTitle>
+              <CardDescription className="text-destructive/70">
+                These actions are irreversible
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium mb-1">Delete Account</h4>
+                    <p className="text-sm text-gray-500">
+                      Permanently delete your account and all your data
+                    </p>
                   </div>
+                  <Button 
+                    variant="destructive" 
+                    onClick={handleDeleteAccount}
+                  >
+                    Delete
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="border-b">
-                <CardTitle className="text-red-600">Danger Zone</CardTitle>
-                <CardDescription>
-                  Actions in this section can't be undone
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border border-red-200 rounded-lg bg-red-50">
-                    <div>
-                      <h4 className="font-medium">Deactivate Account</h4>
-                      <p className="text-sm text-gray-600">
-                        Temporarily disable your account
-                      </p>
-                    </div>
-                    <Button variant="outline">Deactivate</Button>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-4 border border-red-200 rounded-lg bg-red-50">
-                    <div>
-                      <h4 className="font-medium">Delete Account</h4>
-                      <p className="text-sm text-gray-600">
-                        Permanently delete your account and all data
-                      </p>
-                    </div>
-                    <Button 
-                      variant="destructive"
-                      onClick={handleDeleteAccount}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </div>
-    </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </>
   );
 }

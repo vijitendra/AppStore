@@ -8,6 +8,7 @@ import { runMigration as runDeveloperRequestMigration } from "./migrations/add-d
 import { runMigration as runBannerUrlMigration } from "./migrations/add-banner-url";
 import { runMigration as runCreateVideosTableMigration } from "./migrations/create-videos-table";
 import { runMigration as runUpdateVideosTableMigration } from "./migrations/update-videos-table";
+import { runMigration as runDevEngagementMetricsMigration } from "./migrations/add-dev-engagement-metrics";
 import { createMasterAdmin } from "./migrate-master-admin";
 
 const app = express();
@@ -88,6 +89,13 @@ app.use((req, res, next) => {
     } catch (error) {
       console.error("Error updating videos table:", error);
     }
+    
+    // Run the migration to add developer engagement metrics
+    try {
+      await runDevEngagementMetricsMigration();
+    } catch (error) {
+      console.error("Error adding developer engagement metrics:", error);
+    }
   } catch (error) {
     console.error("Error running migrations:", error);
   }
@@ -114,6 +122,24 @@ app.use((req, res, next) => {
   }
   
   const server = await registerRoutes(app);
+
+  // Add a client-side routing middleware for development environment
+  // This ensures that direct navigation to routes like /videos/1 works
+  if (app.get("env") === "development") {
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      // Skip API routes and file requests
+      if (req.path.startsWith('/api/') || 
+          req.path.startsWith('/uploads/') || 
+          req.path.includes('.')) {
+        return next();
+      }
+      
+      // For client-side routes, pass through to Vite's middleware
+      // which will serve the index.html file
+      log(`Handling client-side route: ${req.path}`, "express-router");
+      return next();
+    });
+  }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

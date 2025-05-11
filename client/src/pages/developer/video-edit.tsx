@@ -71,9 +71,22 @@ export default function VideoEditPage() {
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
   
   // Fetch video data
+  console.log("Fetching video with ID:", id);
   const { data: video, isLoading, error } = useQuery<Video>({
-    queryKey: [`/api/videos/${id}`],
-    enabled: !!id
+    queryKey: ["/api/videos", id],
+    enabled: !!id,
+    queryFn: async () => {
+      console.log("Making API request for video:", id);
+      const response = await fetch(`/api/videos/${id}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error fetching video:", response.status, errorText);
+        throw new Error(`Failed to fetch video: ${errorText}`);
+      }
+      const data = await response.json();
+      console.log("Received video data:", data);
+      return data;
+    }
   });
   
   // Set thumbnail preview when data is loaded
@@ -87,17 +100,11 @@ export default function VideoEditPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      title: "",
-      description: "",
-      category: "",
-      tags: "",
-    },
-    values: video ? {
-      title: video.title,
-      description: video.description,
-      category: video.category,
-      tags: video.tags || "",
-    } : undefined,
+      title: video?.title || "",
+      description: video?.description || "",
+      category: video?.category || "Other",
+      tags: video?.tags || "",
+    }
   });
   
   // Update form values when video data is loaded
@@ -118,19 +125,44 @@ export default function VideoEditPage() {
   
   // Upload updated video metadata mutation
   const updateVideoMutation = useMutation({
-    mutationFn: async (data: FormData) => {
-      return apiRequest("PATCH", `/api/videos/${id}`, data);
+    mutationFn: async (values: z.infer<typeof formSchema>) => {
+      console.log("Making API request to update video:", id);
+      console.log("With data:", values);
+      
+      // Make the API request directly using fetch for more control
+      const response = await fetch(`/api/videos/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(values),
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Update failed:", response.status, errorText);
+        throw new Error(`Update failed: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log("Update response:", data);
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Video updated successfully:", data);
       toast({
         title: "Success",
         description: "Video updated successfully",
       });
-      queryClient.invalidateQueries({ queryKey: [`/api/videos/${id}`] });
+      // Invalidate all relevant cache entries
+      queryClient.invalidateQueries({ queryKey: ["/api/videos", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/videos/developer"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
       navigate("/developer/videos");
     },
     onError: (error: Error) => {
+      console.error("Video update error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to update video",
@@ -144,47 +176,8 @@ export default function VideoEditPage() {
     mutationFn: async (formData: FormData) => {
       setIsUploading(true);
       
-      return new Promise<any>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        
-        xhr.open("POST", `/api/videos/${id}/thumbnail`, true);
-        
-        // Track upload progress
-        xhr.upload.onprogress = (event) => {
-          if (event.lengthComputable) {
-            const progress = Math.round((event.loaded / event.total) * 100);
-            setUploadProgress(progress);
-          }
-        };
-        
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const response = JSON.parse(xhr.responseText);
-              resolve(response);
-            } catch (e) {
-              reject(new Error("Invalid response format"));
-            }
-          } else {
-            try {
-              const errorResponse = JSON.parse(xhr.responseText);
-              reject(new Error(errorResponse.message || "Upload failed"));
-            } catch (e) {
-              reject(new Error(`Upload failed with status ${xhr.status}`));
-            }
-          }
-        };
-        
-        xhr.onerror = () => {
-          reject(new Error("Network error occurred"));
-        };
-        
-        xhr.onabort = () => {
-          reject(new Error("Upload aborted"));
-        };
-        
-        xhr.send(formData);
-      });
+      // Use apiRequest with FormData flag
+      return apiRequest("POST", `/api/videos/${id}/thumbnail`, formData, true).then(res => res.json());
     },
     onSuccess: (data) => {
       toast({
@@ -193,9 +186,13 @@ export default function VideoEditPage() {
       });
       setIsUploading(false);
       setThumbnailPreview(data.thumbnailPath);
-      queryClient.invalidateQueries({ queryKey: [`/api/videos/${id}`] });
+      // Invalidate all relevant queries to update the UI everywhere
+      queryClient.invalidateQueries({ queryKey: ["/api/videos", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/videos/developer"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
     },
     onError: (error: Error) => {
+      console.error("Thumbnail upload error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to upload thumbnail",
@@ -245,27 +242,40 @@ export default function VideoEditPage() {
     }
   };
   
-  // Handle form submission
-  const onSubmit = (values: z.infer<typeof formSchema>) => {    
-    const formData = new FormData();
-    
-    // Add form values
-    formData.append("title", values.title);
-    formData.append("description", values.description);
-    formData.append("category", values.category);
-    if (values.tags) formData.append("tags", values.tags);
-    
-    // Start update
-    updateVideoMutation.mutate(formData);
+  // Handle form submission with detailed logging
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    try {
+      console.log("Form submitted with values:", values);
+      
+      // Validate that we have actual values
+      if (!values.title || !values.category) {
+        console.error("Missing required values:", values);
+        toast({
+          title: "Validation Error",
+          description: "Please fill out all required fields",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Send the update
+      console.log("Starting video update mutation");
+      await updateVideoMutation.mutateAsync(values);
+      
+      console.log("Video update completed successfully");
+    } catch (error) {
+      console.error("Error in form submission:", error);
+    }
   };
   
   if (isLoading) {
+    console.log("Loading video data for ID:", id);
     return (
       <>
         <div className="flex items-center justify-center min-h-[500px]">
           <div className="text-center">
             <Loader2Icon className="w-10 h-10 animate-spin mx-auto text-primary mb-4" />
-            <p className="text-muted-foreground">Loading video data...</p>
+            <p className="text-muted-foreground">Loading video data for ID: {id || 'unknown'}...</p>
           </div>
         </div>
       </>
@@ -273,17 +283,30 @@ export default function VideoEditPage() {
   }
   
   if (error || !video) {
+    console.error("Video loading error:", error);
     return (
       <>
         <div className="text-center my-12 p-6 border rounded-lg bg-muted">
           <p className="text-lg font-medium mb-2">Failed to load video</p>
-          <p className="text-muted-foreground mb-4">We couldn't find the video you're looking for.</p>
-          <Button 
-            variant="outline" 
-            onClick={() => navigate("/developer/videos")}
-          >
-            Back to videos
-          </Button>
+          <p className="text-muted-foreground mb-4">
+            We couldn't find the video with ID: {id || 'unknown'}.
+            {error && (
+              <span className="block mt-2 text-sm text-red-500">
+                Error: {error instanceof Error ? error.message : String(error)}
+              </span>
+            )}
+          </p>
+          <div className="space-y-4">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate("/developer/videos")}
+            >
+              Back to videos
+            </Button>
+            <div className="text-xs text-muted-foreground mt-4">
+              <p>If this issue persists, please try refreshing the page</p>
+            </div>
+          </div>
         </div>
       </>
     );
@@ -472,15 +495,15 @@ export default function VideoEditPage() {
                 </div>
                 <div>
                   <p className="font-medium text-xs text-muted-foreground mb-1">Upload Date</p>
-                  <p>{new Date(video.createdAt).toLocaleDateString()}</p>
+                  <p>{video.createdAt ? new Date(video.createdAt).toLocaleDateString() : 'N/A'}</p>
                 </div>
                 <div>
                   <p className="font-medium text-xs text-muted-foreground mb-1">Duration</p>
-                  <p>{formatDuration(video.duration)}</p>
+                  <p>{typeof video.duration === 'number' ? formatDuration(video.duration) : 'N/A'}</p>
                 </div>
                 <div>
                   <p className="font-medium text-xs text-muted-foreground mb-1">Views</p>
-                  <p>{video.viewCount.toLocaleString()}</p>
+                  <p>{typeof video.viewCount === 'number' ? video.viewCount.toLocaleString() : '0'}</p>
                 </div>
                 
                 <div className="pt-2">
@@ -488,15 +511,20 @@ export default function VideoEditPage() {
                   <h4 className="font-medium mb-2">Video Link</h4>
                   <div className="flex items-center gap-2">
                     <Input 
-                      value={`${window.location.origin}/video/${video.id}`} 
+                      value={`${window.location.origin}/videos/${video.id}`} 
                       readOnly 
-                      onClick={(e) => e.currentTarget.select()}
+                      onClick={(e) => {
+                        e.currentTarget.select();
+                        console.log("Video link selected:", `${window.location.origin}/videos/${video.id}`);
+                      }}
                     />
                     <Button 
                       variant="outline" 
                       size="sm" 
                       onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/video/${video.id}`);
+                        const videoLink = `${window.location.origin}/videos/${video.id}`;
+                        navigator.clipboard.writeText(videoLink);
+                        console.log("Copied video link to clipboard:", videoLink);
                         toast({
                           title: "Copied to clipboard",
                           description: "Video link has been copied",

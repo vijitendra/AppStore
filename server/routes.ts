@@ -7,11 +7,11 @@ import path from "path";
 import fs from "fs";
 import { randomUUID } from "crypto";
 import { insertAppSchema, appUploadSchema, appVersionUploadSchema, users, reviews, insertAppVersionSchema, appSubCategories } from "@shared/schema";
-import { videos, insertVideoSchema, videoUploadSchema } from "@shared/schema.videos";
+import { videos as videosTable, insertVideoSchema, videoUploadSchema } from "@shared/schema.videos";
 import { ZodError } from "zod";
 import { db } from "./db";
 import { promoteUser } from "./migrate-master-admin";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, desc } from "drizzle-orm";
 
 // Configure file storage
 const uploadsDir = path.join(process.cwd(), 'uploads');
@@ -209,7 +209,56 @@ const isVideoOwner = async (req: Request, res: Response, next: any) => {
   }
 };
 
+// Add a route handler for serving client-side routes
+const serveClientSideRoute = (req: Request, res: Response, next: any) => {
+  // Only pass through to API routes or static files
+  if (req.path.startsWith('/api/') || 
+      req.path.startsWith('/uploads/') || 
+      req.path.includes('.')) {
+    return next();
+  }
+  
+  // Check if this is a known client-side route
+  const clientRoutes = [
+    '/videos/*',
+    '/video/*', // Support both formats in case there are still references
+    '/app/*',
+    '/developer/*',
+    '/admin/*',
+    '/profile',
+    '/auth',
+    '/apps/*',
+    '/about',
+    '/careers',
+    '/blog',
+    '/press',
+    '/contact',
+    '/privacy',
+    '/terms',
+    '/cookies',
+    '/legal'
+  ];
+  
+  // If it's a client route or the root, send the index.html
+  const isClientRoute = clientRoutes.some(route => {
+    if (route.endsWith('*')) {
+      const prefix = route.slice(0, -1);
+      return req.path === prefix || req.path.startsWith(prefix);
+    }
+    return req.path === route;
+  });
+  
+  if (req.path === '/' || isClientRoute) {
+    return next();
+  }
+  
+  // If we made it here, it might be a 404, but let the client handle routing
+  next();
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Register the client-side route handler
+  app.use(serveClientSideRoute);
   // Setup authentication routes
   setupAuth(app);
   
@@ -347,6 +396,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(apps);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch featured apps" });
+    }
+  });
+  
+  // Developer Engagement Leaderboard endpoints
+  
+  // Get top developers by overall engagement score
+  app.get("/api/developers/leaderboard/engagement", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const developers = await storage.getTopDevelopersByEngagement(limit);
+      res.json(developers);
+    } catch (error) {
+      console.error("Error fetching developers by engagement:", error);
+      res.status(500).json({ message: "Failed to fetch developer engagement leaderboard" });
+    }
+  });
+  
+  // Get top developers by total downloads
+  app.get("/api/developers/leaderboard/downloads", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const developers = await storage.getTopDevelopersByDownloads(limit);
+      res.json(developers);
+    } catch (error) {
+      console.error("Error fetching developers by downloads:", error);
+      res.status(500).json({ message: "Failed to fetch developer downloads leaderboard" });
+    }
+  });
+  
+  // Get top developers by number of apps
+  app.get("/api/developers/leaderboard/apps", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const developers = await storage.getTopDevelopersByApps(limit);
+      res.json(developers);
+    } catch (error) {
+      console.error("Error fetching developers by app count:", error);
+      res.status(500).json({ message: "Failed to fetch developer app count leaderboard" });
+    }
+  });
+  
+  // Get top developers by average rating
+  app.get("/api/developers/leaderboard/rating", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const developers = await storage.getTopDevelopersByRating(limit);
+      res.json(developers);
+    } catch (error) {
+      console.error("Error fetching developers by rating:", error);
+      res.status(500).json({ message: "Failed to fetch developer rating leaderboard" });
+    }
+  });
+  
+  // Update a developer's engagement metrics
+  app.post("/api/developers/:id/update-metrics", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const developerId = parseInt(req.params.id);
+      if (isNaN(developerId)) {
+        return res.status(400).json({ message: "Invalid developer ID" });
+      }
+      
+      const updatedDeveloper = await storage.updateDeveloperEngagementMetrics(developerId);
+      if (!updatedDeveloper) {
+        return res.status(404).json({ message: "Developer not found" });
+      }
+      
+      res.json(updatedDeveloper);
+    } catch (error) {
+      console.error("Error updating developer metrics:", error);
+      res.status(500).json({ message: "Failed to update developer engagement metrics" });
     }
   });
   
@@ -2082,6 +2201,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get all approved videos (public)
+  app.get("/api/videos", async (req, res) => {
+    try {
+      // For now, let's just return all videos (we don't have many yet)
+      const allVideos = await db.select().from(videosTable);
+      
+      // Add developer information to each video
+      const videosWithDeveloperInfo = await Promise.all(allVideos.map(async (video) => {
+        const developer = await storage.getUser(video.developerId);
+        return {
+          ...video,
+          developer: developer ? {
+            username: developer.username,
+            firstName: developer.firstName,
+            lastName: developer.lastName,
+            profilePicture: developer.profilePicture
+          } : undefined
+        };
+      }));
+      
+      res.json(videosWithDeveloperInfo);
+    } catch (error) {
+      console.error("Error fetching approved videos:", error);
+      res.status(500).json({ message: "Failed to fetch videos" });
+    }
+  });
+  
   // Get video details
   app.get("/api/videos/:id", async (req, res) => {
     try {
@@ -2095,10 +2241,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Video not found" });
       }
       
-      res.json(video);
+      // Add developer information
+      const developer = await storage.getUser(video.developerId);
+      const result = {
+        ...video,
+        developer: developer ? {
+          username: developer.username,
+          firstName: developer.firstName,
+          lastName: developer.lastName,
+          profilePicture: developer.profilePicture
+        } : undefined
+      };
+      
+      res.json(result);
     } catch (error) {
       console.error("Error fetching video details:", error);
       res.status(500).json({ message: "Failed to fetch video details" });
+    }
+  });
+  
+  // Increment video view count
+  app.post("/api/videos/:id/view", async (req, res) => {
+    try {
+      const videoId = parseInt(req.params.id);
+      if (isNaN(videoId)) {
+        return res.status(400).json({ message: "Invalid video ID" });
+      }
+      
+      const video = await storage.getVideo(videoId);
+      if (!video) {
+        return res.status(404).json({ message: "Video not found" });
+      }
+      
+      // Increment view count
+      await storage.updateVideo(videoId, { 
+        viewCount: (video.viewCount || 0) + 1 
+      });
+      
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Failed to update view count:", error);
+      res.status(500).json({ message: "Failed to update view count" });
     }
   });
   
@@ -2169,17 +2352,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const videoId = parseInt(req.params.id);
       
+      console.log("Updating video:", videoId);
+      console.log("Request body:", JSON.stringify(req.body, null, 2));
+      console.log("Content-Type:", req.headers['content-type']);
+      
+      // Validation
+      if (!req.body.title || !req.body.category) {
+        console.log("Missing required fields");
+        return res.status(400).json({ 
+          message: "Missing required fields", 
+          errors: {
+            title: !req.body.title ? "Title is required" : null,
+            category: !req.body.category ? "Category is required" : null
+          }
+        });
+      }
+      
       // Update video
-      const updatedVideo = await storage.updateVideo(videoId, req.body);
+      const updateData = {
+        title: req.body.title,
+        description: req.body.description,
+        category: req.body.category,
+        tags: req.body.tags,
+        updatedAt: new Date()
+      };
+      
+      console.log("Update data being sent to storage:", updateData);
+      const updatedVideo = await storage.updateVideo(videoId, updateData);
       
       if (!updatedVideo) {
+        console.log("Video not found for ID:", videoId);
         return res.status(404).json({ message: "Video not found" });
       }
       
+      console.log("Video updated successfully:", updatedVideo);
       res.json(updatedVideo);
     } catch (error) {
       console.error("Error updating video:", error);
-      res.status(500).json({ message: "Failed to update video" });
+      res.status(500).json({ message: "Failed to update video", error: String(error) });
     }
   });
   

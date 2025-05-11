@@ -54,6 +54,7 @@ export default function AppUploadPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [iconPreview, setIconPreview] = useState<string | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [screenshotPreviews, setScreenshotPreviews] = useState<string[]>([]);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState<boolean>(false);
   const [packageNameToImport, setPackageNameToImport] = useState<string>("");
@@ -452,34 +453,141 @@ export default function AppUploadPage() {
   };
 
   // Handle icon file change
-  const handleIconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Function to check image dimensions
+  const checkImageDimensions = (
+    file: File, 
+    requiredWidth: number, 
+    requiredHeight: number, 
+    tolerancePercent = 0
+  ): Promise<{isValid: boolean, width: number, height: number}> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const width = img.width;
+        const height = img.height;
+        
+        if (tolerancePercent > 0) {
+          // Calculate allowed deviation
+          const widthDeviation = requiredWidth * (tolerancePercent / 100);
+          const heightDeviation = requiredHeight * (tolerancePercent / 100);
+          
+          // Check if dimensions are within acceptable range
+          const isWidthValid = width >= (requiredWidth - widthDeviation) && width <= (requiredWidth + widthDeviation);
+          const isHeightValid = height >= (requiredHeight - heightDeviation) && height <= (requiredHeight + heightDeviation);
+          
+          resolve({
+            isValid: isWidthValid && isHeightValid,
+            width,
+            height
+          });
+        } else {
+          // Exact dimensions required
+          resolve({
+            isValid: width === requiredWidth && height === requiredHeight,
+            width,
+            height
+          });
+        }
+      };
+      
+      img.onerror = () => {
+        resolve({isValid: false, width: 0, height: 0});
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleIconChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     const file = files[0];
-    form.setValue('icon', files);
-
     const iconURL = URL.createObjectURL(file);
+    
+    // Check if icon meets dimension requirements (512x512 px)
+    const { isValid, width, height } = await checkImageDimensions(file, 512, 512, 5);
+    
+    if (!isValid) {
+      toast({
+        title: "Invalid icon dimensions",
+        description: `Icon must be 512x512 pixels (yours is ${width}x${height}). This is required for proper display in the app store.`,
+        variant: "destructive",
+      });
+      e.target.value = ''; // Clear the file input
+      return;
+    }
+    
+    form.setValue('icon', files);
     setIconPreview(iconURL);
+  };
+  
+  const handleBannerChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    const bannerURL = URL.createObjectURL(file);
+    
+    // Recommended dimensions for banner: 1024x500 px (app store standard)
+    const { isValid, width, height } = await checkImageDimensions(file, 1024, 500, 10);
+    
+    if (!isValid) {
+      toast({
+        title: "Banner dimensions warning",
+        description: `Recommended banner size is 1024x500 pixels (yours is ${width}x${height}). Non-standard dimensions may affect display quality.`,
+        variant: "default",
+      });
+      // We still allow non-standard dimensions for banners
+    }
+    
+    form.setValue('banner', files);
+    setBannerPreview(bannerURL);
   };
 
   // Handle screenshots file change
-  const handleScreenshotsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleScreenshotsChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
     const screenshotURLs: string[] = [];
+    const validFiles = new DataTransfer();
+    let hasInvalidScreenshots = false;
 
     // Only take up to 5 screenshots
     const maxScreenshots = Math.min(5, files.length);
 
     for (let i = 0; i < maxScreenshots; i++) {
       const file = files[i];
+      
+      // Recommended dimensions for phone screenshots: 1080x1920 (9:16 aspect ratio)
+      // Allow 10% tolerance for dimensions
+      const { isValid, width, height } = await checkImageDimensions(file, 1080, 1920, 10);
+      
+      if (!isValid) {
+        toast({
+          title: "Screenshot dimensions warning",
+          description: `Screenshot #${i+1} should be 1080x1920 pixels (yours is ${width}x${height}). Recommended aspect ratio is 9:16.`,
+          variant: "destructive",
+        });
+        hasInvalidScreenshots = true;
+      }
+      
+      // We still add the file but with a warning
+      validFiles.items.add(file);
       const screenshotURL = URL.createObjectURL(file);
       screenshotURLs.push(screenshotURL);
     }
 
-    form.setValue('screenshots', files);
+    if (hasInvalidScreenshots) {
+      toast({
+        title: "Screenshot dimensions",
+        description: "For best appearance on the store, please use 1080x1920 pixel screenshots (9:16 aspect ratio).",
+        variant: "default",
+      });
+    }
+
+    form.setValue('screenshots', validFiles.files);
     setScreenshotPreviews(screenshotURLs);
   };
 
@@ -824,7 +932,12 @@ export default function AppUploadPage() {
 
                 <div>
                   <FormItem>
-                    <FormLabel>App Icon</FormLabel>
+                    <FormLabel className="flex items-center">
+                      App Icon 
+                      <span className="ml-2 text-xs text-muted-foreground font-normal">
+                        (512x512 px required)
+                      </span>
+                    </FormLabel>
                     <FormControl>
                       <div className="mt-1">
                         <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 relative">
@@ -863,8 +976,57 @@ export default function AppUploadPage() {
 
                 <div>
                   <FormItem>
+                    <FormLabel className="flex items-center">
+                      App Banner
+                      <span className="ml-2 text-xs text-muted-foreground font-normal">
+                        (1024x500 px recommended)
+                      </span>
+                    </FormLabel>
+                    <FormControl>
+                      <div className="mt-1">
+                        <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 relative">
+                          {bannerPreview ? (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <img src={bannerPreview} alt="App banner preview" className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 flex items-center justify-center transition-all">
+                                <div className="text-white opacity-0 hover:opacity-100">
+                                  <p className="text-xs">Click to change</p>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                              <ImagePlus className="w-10 h-10 mb-3 text-gray-500" />
+                              <p className="text-sm text-gray-500">Click to upload app banner</p>
+                              <p className="text-xs text-gray-500 mt-1">PNG, JPG, WEBP (1024x500px recommended)</p>
+                            </div>
+                          )}
+                          <input 
+                            type="file" 
+                            className="hidden" 
+                            accept="image/*"
+                            onChange={handleBannerChange}
+                          />
+                        </label>
+                      </div>
+                    </FormControl>
+                    {form.formState.errors.banner && (
+                      <p className="text-sm font-medium text-destructive mt-2">
+                        {form.formState.errors.banner.message}
+                      </p>
+                    )}
+                  </FormItem>
+                </div>
+
+                <div>
+                  <FormItem>
                     <div className="flex justify-between items-center">
-                      <FormLabel>Screenshots</FormLabel>
+                      <FormLabel className="flex items-center">
+                        Screenshots
+                        <span className="ml-2 text-xs text-muted-foreground font-normal">
+                          (1080x1920 px recommended, 9:16 aspect ratio)
+                        </span>
+                      </FormLabel>
                       {screenshotPreviews.length > 0 && (
                         <Button 
                           variant="ghost" 

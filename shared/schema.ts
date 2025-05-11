@@ -17,6 +17,13 @@ export const users = pgTable("users", {
   isBlocked: boolean("is_blocked").default(false).notNull(),
   hasDeveloperRequest: boolean("has_developer_request").default(false).notNull(),
   developerRequestDate: timestamp("developer_request_date"),
+  // Developer community engagement metrics
+  developerBio: text("developer_bio"),
+  totalApps: integer("total_apps").default(0).notNull(),
+  totalDownloads: integer("total_downloads").default(0).notNull(),
+  averageRating: integer("average_rating").default(0).notNull(),  // Stored as rating * 10 (e.g. 4.5 = 45)
+  engagementScore: integer("engagement_score").default(0).notNull(),
+  lastActiveAt: timestamp("last_active_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

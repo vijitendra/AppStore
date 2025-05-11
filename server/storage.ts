@@ -84,6 +84,13 @@ export interface IStorage {
   updateVideo(id: number, videoData: Partial<Video>): Promise<Video | undefined>;
   deleteVideo(id: number): Promise<boolean>;
   
+  // Developer engagement metrics
+  getTopDevelopersByEngagement(limit?: number): Promise<User[]>;
+  getTopDevelopersByDownloads(limit?: number): Promise<User[]>;
+  getTopDevelopersByApps(limit?: number): Promise<User[]>;
+  getTopDevelopersByRating(limit?: number): Promise<User[]>;
+  updateDeveloperEngagementMetrics(developerId: number): Promise<User | undefined>;
+  
   // Session store
   sessionStore: session.SessionStore;
 }
@@ -971,6 +978,100 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error deleting video:", error);
       return false;
+    }
+  }
+
+  // Developer engagement leaderboard methods
+  async getTopDevelopersByEngagement(limit: number = 10): Promise<User[]> {
+    try {
+      return await db.select()
+        .from(users)
+        .where(eq(users.isDeveloper, true))
+        .orderBy(desc(users.engagementScore))
+        .limit(limit);
+    } catch (error) {
+      console.error("Error getting top developers by engagement:", error);
+      return [];
+    }
+  }
+  
+  async getTopDevelopersByDownloads(limit: number = 10): Promise<User[]> {
+    try {
+      return await db.select()
+        .from(users)
+        .where(eq(users.isDeveloper, true))
+        .orderBy(desc(users.totalDownloads))
+        .limit(limit);
+    } catch (error) {
+      console.error("Error getting top developers by downloads:", error);
+      return [];
+    }
+  }
+  
+  async getTopDevelopersByApps(limit: number = 10): Promise<User[]> {
+    try {
+      return await db.select()
+        .from(users)
+        .where(eq(users.isDeveloper, true))
+        .orderBy(desc(users.totalApps))
+        .limit(limit);
+    } catch (error) {
+      console.error("Error getting top developers by apps:", error);
+      return [];
+    }
+  }
+  
+  async getTopDevelopersByRating(limit: number = 10): Promise<User[]> {
+    try {
+      return await db.select()
+        .from(users)
+        .where(eq(users.isDeveloper, true))
+        .orderBy(desc(users.averageRating))
+        .limit(limit);
+    } catch (error) {
+      console.error("Error getting top developers by rating:", error);
+      return [];
+    }
+  }
+  
+  async updateDeveloperEngagementMetrics(developerId: number): Promise<User | undefined> {
+    try {
+      // Calculate aggregate metrics
+      const appsResult = await db.select({
+        appCount: sql`count(${apps.id})`,
+        totalDownloads: sql`coalesce(sum(${apps.downloads}), 0)`,
+        avgRating: sql`coalesce(avg(${apps.rating}), 0)`
+      })
+      .from(apps)
+      .where(eq(apps.developerId, developerId));
+      
+      if (!appsResult.length) {
+        return undefined;
+      }
+      
+      const { appCount, totalDownloads, avgRating } = appsResult[0];
+      
+      // Calculate engagement score - custom formula that weights apps, downloads, and ratings
+      const engagementScore = Number(appCount) * 10 + 
+                             Math.floor(Number(totalDownloads) / 100) +
+                             Math.floor(Number(avgRating) * 5);
+      
+      // Update the developer record
+      const [updatedUser] = await db.update(users)
+        .set({
+          totalApps: Number(appCount),
+          totalDownloads: Number(totalDownloads),
+          averageRating: Math.floor(Number(avgRating) * 10), // Store as rating * 10
+          engagementScore: engagementScore,
+          lastActiveAt: new Date()
+        })
+        .where(eq(users.id, developerId))
+        .returning();
+      
+      return updatedUser;
+    } catch (error) {
+      console.error("Error updating developer engagement metrics:", error);
+      return undefined;
     }
   }
 }

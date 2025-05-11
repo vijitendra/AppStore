@@ -953,7 +953,7 @@ export default function AdminPage() {
                                       <Button 
                                         variant="outline" 
                                         size="sm"
-                                        onClick={() => setLocation(`/apps/${app.id}`)}
+                                        onClick={() => setLocation(`/app/${app.id}`)}
                                       >
                                         <Eye className="h-4 w-4 mr-1" />
                                         View
@@ -1432,7 +1432,7 @@ export default function AdminPage() {
                                     size="sm" 
                                     variant="outline" 
                                     onClick={() => {
-                                      setLocation(`/apps/${app.id}`);
+                                      setLocation(`/app/${app.id}`);
                                     }}
                                   >
                                     <Eye className="h-3 w-3 mr-1" />

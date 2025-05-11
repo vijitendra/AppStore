@@ -36,14 +36,24 @@ export default function AppListItem({ app, index }: AppListItemProps) {
           <span className="font-medium">{app.rating || "New"}</span>
         </div>
         
-        <Button 
-          variant="secondary" 
-          size="sm" 
-          className="rounded-full"
-          asChild
-        >
-          <Link href={`/app/${app.id}`}>Get</Link>
-        </Button>
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="rounded-full"
+            asChild
+          >
+            <Link href={`/developer/app/${app.id}`}>Edit</Link>
+          </Button>
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            className="rounded-full"
+            asChild
+          >
+            <Link href={`/app/${app.id}`} target="_blank">View</Link>
+          </Button>
+        </div>
       </div>
     </div>
   );

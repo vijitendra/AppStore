@@ -68,4 +68,16 @@
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
   }
+  
+  /* Responsive grid for featured apps section */
+  .auto-cols-featured {
+    grid-auto-columns: minmax(280px, 280px);
+  }
+  
+  /* Make grid columns more responsive on smaller screens */
+  @media (max-width: 640px) {
+    .auto-cols-featured {
+      grid-auto-columns: minmax(250px, 250px);
+    }
+  }
 }

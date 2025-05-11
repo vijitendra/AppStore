@@ -12,6 +12,7 @@ import HomePage from "@/pages/home-page";
 import AuthPage from "@/pages/auth-page";
 import AppsPage from "@/pages/apps-page";
 import AppDetailsPage from "@/pages/app-details-page";
+import VideoPlayerPage from "@/pages/video-player-page";
 import AboutPage from "@/pages/about";
 import CareersPage from "@/pages/careers";
 import BlogPage from "@/pages/blog";
@@ -51,6 +52,7 @@ function Router() {
       <Route path="/" component={HomePage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/app/:id" component={AppDetailsPage} />
+      <Route path="/videos/:id" component={VideoPlayerPage} />
       <Route path="/apps" component={AppsPage} />
       <Route path="/apps/categories" component={AppsPage} />
       <Route path="/apps/category/:category/:subcategory?" component={AppsPage} />
@@ -84,6 +86,7 @@ function Router() {
       <DeveloperRoute path="/developer/app/:id" component={AppEditPage} />
       <DeveloperRoute path="/developer/videos" component={DeveloperVideosPage} />
       <DeveloperRoute path="/developer/video-upload" component={VideoUploadPage} />
+      <DeveloperRoute path="/developer/video-edit/:id" component={VideoEditPage} />
       
       {/* Admin routes */}
       <AdminRoute path="/admin" component={AdminUserManagementPage} />
